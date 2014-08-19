@@ -6,7 +6,7 @@ def python_logo(ts):
     #    return xmlrpclib.Binary(handle.read())
     return ts
 
-server = SimpleXMLRPCServer(("localhost", 9000))
+server = SimpleXMLRPCServer(("localhost", 10002))
 print "Listening on port 8000..."
 server.register_function(python_logo, 'python_logo')
 server.serve_forever()
