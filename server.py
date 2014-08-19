@@ -26,6 +26,9 @@ def python_logo(segment, width, height, br):
     with open(file_out, "rb") as handle:
         trans_segment = xmlrpclib.Binary(handle.read())
 
+    cmd = "rm -f " + file_in + " " + file_out
+    os.system(cmd)
+
     return trans_segment
 
 server = SimpleXMLRPCServer(("localhost", 10002))
