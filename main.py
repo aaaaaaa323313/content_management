@@ -1,12 +1,13 @@
 import os
 import web
 import base64
+import datetime
+import xmlrpclib
 
 urls = (
     '/\S+\.ts',     'handle_ts',
     '/\S+\.m3u8',   'handle_m3u8',
     )
-
 
 
 def get_trans_params(full_path):
@@ -18,6 +19,15 @@ def get_trans_params(full_path):
 
 
 class handle_ts:
+
+    def offloading(self, orig_file, width, height, br, path):
+        proxy = xmlrpclib.ServerProxy("http://localhost:10002/")
+        with open(orig_file, "rb") as handle:
+            segment = xmlrpclib.Binary(handle.read())
+        with open(path, "wb") as handle:
+            handle.write(proxy.python_logo(segment, width, height, br).data)
+
+
     def GET(self):
         request_file = web.ctx.path
         path = '/home/guanyu/Public/me/static' + request_file
@@ -33,11 +43,18 @@ class handle_ts:
             print 'height:'  + height
             print 'bitrate:' + br
 
-            cmd = "ffmpeg -i " + orig_file + " -s " \
-                + width + "x" + height + " " + path
-            os.system(cmd)
+            overload = True
+            if overload:
+                self.offloading(orig_file, width, height, br, path)
+            else:
+                cmd = "ffmpeg -i " + orig_file + " -s " \
+                        + width + "x" + height + " " + path
+                os.system(cmd)
             raise web.seeother('/static' + request_file)
+
             #raise web.notfound()
+
+
 
 class handle_m3u8:
     def GET(self):
@@ -50,6 +67,6 @@ class handle_m3u8:
 
 
 application = web.application(urls, globals()).wsgifunc()
-
+print 'the server has quited'
 
 
