@@ -15,7 +15,7 @@ def get_trans_params(full_path):
     [prefix, suffix]    = name.split('.')
     [vid, width, height, br, sid] = prefix.split('_')
     orig_file = vid + '_' + sid + '.' + suffix
-    return [width, height, br, sid, orig_file]
+    return [vid, width, height, br, sid, orig_file]
 
 
 class handle_ts:
@@ -29,39 +29,62 @@ class handle_ts:
 
 
     def GET(self):
+        vid     = ''
+        width   = ''
+        height  = ''
+        br      = ''
+        sid     = ''
+        path    = ''
+        orig_file = ''
+
         request_file = web.ctx.path
-        path = '/home/guanyu/Public/me/static' + request_file
-        if os.path.exists(path):
-            raise web.seeother('/static' + request_file)
-        else:
-            [width, height, br, sid, orig_file] = get_trans_params(request_file)
-            orig_file = '/home/guanyu/Public/me/static' + '/' + orig_file
-            print 'requested file:' + request_file
-            print 'original file:'  + orig_file
-            print 'segment id:'     + sid
-            print 'width:'   + width
-            print 'height:'  + height
-            print 'bitrate:' + br
+        cnt = request_file.count('_')
 
-            overload = True
-            if overload:
-                self.offloading(orig_file, width, height, br, path)
+        if cnt == 4:
+            [vid, width, height, br, sid, orig_file] = get_trans_params(request_file)
+            path = '/home/guanyu/Public/me/static/' + vid + request_file
+
+            if os.path.exists(path):
+                raise web.seeother('/static/' + vid  + request_file)
             else:
-                cmd = "ffmpeg -i " + orig_file + " -s " \
-                        + width + "x" + height + " " + path
-                os.system(cmd)
-            raise web.seeother('/static' + request_file)
+                orig_file = '/home/guanyu/Public/me/static/' + vid + '/' + orig_file
+                print 'requested file:' + request_file
+                print 'original file:'  + orig_file
+                print 'segment id:'     + sid
+                print 'width:'   + width
+                print 'height:'  + height
+                print 'bitrate:' + br
 
-            #raise web.notfound()
+                overload = False
+                if overload:
+                    self.offloading(orig_file, width, height, br, path)
+                else:
+                    cmd = "ffmpeg -i " + orig_file + " -s " \
+                            + width + "x" + height + " " + path
+                    os.system(cmd)
+
+                raise web.seeother('/static/' + vid + request_file)
+
+        elif cnt == 1:
+            vid = request_file.split('_')[0]
+            path = '/home/guanyu/Public/me/static' + vid + request_file
+            if os.path.exists(path):
+                raise web.seeother('/static' + vid + request_file)
+            else:
+                raise web.notfound()
+        else:
+            raise web.notfound()
 
 
 
 class handle_m3u8:
     def GET(self):
         request_file = web.ctx.path
-        path = '/home/guanyu/Public/me/static' + request_file
+        [orig_file, postfix] = request_file.split('.')
+
+        path = '/home/guanyu/Public/me/static/' + orig_file + '/' + request_file
         if os.path.exists(path):
-            raise web.seeother('/static' + request_file)
+            raise web.seeother('/static/' + orig_file + '/' + request_file)
         else:
             raise web.notfound()
 
