@@ -1,6 +1,7 @@
 import os
 import web
 import base64
+import memcache
 import datetime
 import xmlrpclib
 
@@ -21,7 +22,7 @@ def get_trans_params(full_path):
 class handle_ts:
 
     def offloading(self, orig_file, width, height, br, path):
-        proxy = xmlrpclib.ServerProxy("http://localhost:10002/")
+        proxy = xmlrpclib.ServerProxy("http://155.69.55.92:10002/")
         with open(orig_file, "rb") as handle:
             segment = xmlrpclib.Binary(handle.read())
         with open(path, "wb") as handle:
@@ -40,6 +41,9 @@ class handle_ts:
         request_file = web.ctx.path
         cnt = request_file.count('_')
 
+        value = mc.incr('queue')
+        print "total requests:", value
+
         if cnt == 4:
             [vid, width, height, br, sid, orig_file] = get_trans_params(request_file)
             path = '/home/guanyu/Public/me/static/' + vid + request_file
@@ -55,13 +59,19 @@ class handle_ts:
                 print 'height:'  + height
                 print 'bitrate:' + br
 
-                overload = False
-                if overload:
+                value = mc.get("trans_queue")
+                print 'current transcoding size', value
+
+                if value >= 2:
+                    print 'offloading'
                     self.offloading(orig_file, width, height, br, path)
                 else:
+                    print 'online transcoding'
+                    mc.incr("trans_queue")
                     cmd = "ffmpeg -i " + orig_file + " -s " \
                             + width + "x" + height + " " + path
                     os.system(cmd)
+                    mc.decr("trans_queue")
 
                 raise web.seeother('/static/' + vid + request_file)
 
@@ -89,6 +99,7 @@ class handle_m3u8:
             raise web.notfound()
 
 
+mc=memcache.Client(['127.0.0.1:11211'],debug=0)
 application = web.application(urls, globals()).wsgifunc()
 print 'the server has quited'
 
