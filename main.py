@@ -1,7 +1,7 @@
 import os
 import web
+import redis
 import base64
-import memcache
 import datetime
 import xmlrpclib
 
@@ -9,7 +9,6 @@ urls = (
     '/\S+\.ts',     'handle_ts',
     '/\S+\.m3u8',   'handle_m3u8',
     )
-
 
 def get_trans_params(full_path):
     [path, name]        = os.path.split(full_path)
@@ -39,9 +38,12 @@ class handle_ts:
         orig_file = ''
 
         request_file = web.ctx.path
+        #print request_file
+        r_cache.incr(request_file)
+
         cnt = request_file.count('_')
 
-        value = mc.incr('queue')
+        value = r_cache.incr('queue')
         print "total requests:", value
 
         if cnt == 4:
@@ -59,7 +61,7 @@ class handle_ts:
                 print 'height:'  + height
                 print 'bitrate:' + br
 
-                value = mc.get("trans_queue")
+                value = r_cache.get("trans_queue")
                 print 'current transcoding size', value
 
                 if value >= 2:
@@ -67,11 +69,11 @@ class handle_ts:
                     self.offloading(orig_file, width, height, br, path)
                 else:
                     print 'online transcoding'
-                    mc.incr("trans_queue")
+                    r_cache.incr("trans_queue")
                     cmd = "ffmpeg -i " + orig_file + " -s " \
                             + width + "x" + height + " " + path
                     os.system(cmd)
-                    mc.decr("trans_queue")
+                    r_cache.decr("trans_queue")
 
                 raise web.seeother('/static/' + vid + request_file)
 
@@ -99,7 +101,7 @@ class handle_m3u8:
             raise web.notfound()
 
 
-mc=memcache.Client(['127.0.0.1:11211'],debug=0)
+r_cache = redis.StrictRedis(host='localhost', port=6379, db=0)
 application = web.application(urls, globals()).wsgifunc()
 print 'the server has quited'
 
