@@ -43,7 +43,7 @@ class handle_ts:
 
         cnt = request_file.count('_')
 
-        value = r_cache.incr('queue')
+        value = r_cache.incr('overall_request_number')
         print "total requests:", value
 
         if cnt == 4:
@@ -62,6 +62,7 @@ class handle_ts:
                 print 'bitrate:' + br
 
                 value = r_cache.get("trans_queue")
+                value = int(value)
                 print 'current transcoding size', value
 
                 if value >= 2:
@@ -75,8 +76,10 @@ class handle_ts:
                     os.system(cmd)
                     r_cache.decr("trans_queue")
 
+                r_cache.incr('overall_transcoding_number')
                 raise web.seeother('/static/' + vid + request_file)
 
+        #the original bitrate file
         elif cnt == 1:
             vid = request_file.split('_')[0]
             path = '/home/guanyu/Public/me/static' + vid + request_file
