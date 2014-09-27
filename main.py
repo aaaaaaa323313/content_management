@@ -1,5 +1,6 @@
 import os
 import web
+import time
 import redis
 import base64
 import datetime
@@ -77,6 +78,8 @@ class handle_ts:
                     r_cache.decr("trans_queue")
 
                 r_cache.incr('overall_transcoding_number')
+                t = time.time()
+                r_cache.sadd('transcoding_times', t)
                 raise web.seeother('/static/' + vid + request_file)
 
         #the original bitrate file
